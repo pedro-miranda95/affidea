@@ -126,14 +126,18 @@
     list-style:none; display:flex; align-items:center; gap:8px;
   }
   details.optional-fields summary::-webkit-details-marker{display:none;}
-  .opt-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; padding-bottom:16px;}
+  .opt-grid{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:10px; padding-bottom:16px;}
+  .opt-grid .field{min-width:0;}
   .opt-grid.full{grid-template-columns:1fr;}
   .field label{font-size:11px; color:var(--muted); font-weight:600; display:block; margin-bottom:5px; letter-spacing:.02em;}
   .field input, .field select{
-    width:100%; border:1px solid var(--line); border-radius:10px; padding:10px 11px;
+    width:100%; min-width:0; box-sizing:border-box; border:1px solid var(--line); border-radius:10px; padding:10px 8px;
     font-family:'Inter',sans-serif; font-size:14px; color:var(--ink); background:#FBFCFE;
   }
   .field input:focus, .field select:focus{outline:2px solid var(--blue); outline-offset:1px;}
+  .field input[type="time"]{
+    min-width:0; -webkit-min-logical-width:0; appearance:none; -webkit-appearance:none;
+  }
 
   /* ================= DAY ROWS ================= */
   .day{
@@ -168,8 +172,9 @@
 
   .day-body{padding:2px 15px 15px;}
   .shift{
-    display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;
+    display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:10px; margin-bottom:10px;
   }
+  .shift .field{min-width:0;}
   .shift .field label{margin-bottom:4px;}
   .shift-actions{display:flex; gap:16px; margin-top:2px;}
   .link-btn{
@@ -179,7 +184,8 @@
   .link-btn.danger{color:#B5533C;}
 
   /* ================= FALTAS / FERIAS ================= */
-  .fx-row{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .fx-row{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:10px;}
+  .fx-row .field{min-width:0;}
 
   /* ================= SUMMARY CARD ================= */
   .summary-card{
@@ -334,7 +340,7 @@
   </div>
 
   <div class="actions">
-    <button class="btn btn-primary" id="exportBtn">Exportar PDF para a clínica</button>
+    <button class="btn btn-primary" id="exportBtn">Exportar / Partilhar PDF</button>
     <button class="btn btn-ghost" id="resetBtn">Limpar este mês</button>
   </div>
 
@@ -745,7 +751,7 @@
     doc.line(x, y + 2.5, x + w, y + 2.5);
   }
 
-  function exportPDF(){
+  function buildPDFDoc(){
     var jsPDFCtor = window.jspdf ? window.jspdf.jsPDF : window.jsPDF;
     var doc = new jsPDFCtor({ unit: 'pt', format: 'a4' });
     var pageWidth = doc.internal.pageSize.getWidth();
@@ -884,7 +890,43 @@
     doc.text('MOD-G-078B | Rev.00', pageWidth - marginX, doc.internal.pageSize.getHeight() - 24, { align:'right' });
 
     var filename = 'Folha_de_Ponto_' + monthName + '_' + current.year + '.pdf';
-    doc.save(filename);
+    return { doc: doc, filename: filename };
+  }
+
+  function downloadBlob(blob, filename){
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+  }
+
+  function exportPDF(){
+    var built = buildPDFDoc();
+    var blob = built.doc.output('blob');
+
+    // On phones (iOS/Android), hand the PDF to the native share sheet so
+    // WhatsApp, Mail, AirDrop, etc. show up as direct send options.
+    if(navigator.canShare){
+      try{
+        var file = new File([blob], built.filename, { type: 'application/pdf' });
+        if(navigator.canShare({ files: [file] })){
+          navigator.share({ files: [file], title: built.filename })
+            .then(function(){ showToast('PDF partilhado.'); })
+            .catch(function(err){
+              if(err && err.name === 'AbortError') return; // person cancelled the share sheet
+              downloadBlob(blob, built.filename);
+              showToast('PDF exportado.');
+            });
+          return;
+        }
+      }catch(e){ /* fall through to download */ }
+    }
+
+    downloadBlob(blob, built.filename);
     showToast('PDF exportado.');
   }
 
