@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Cartão de Ponto · Margarida</title>
+<meta name="theme-color" content="#F4F7FB">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+  :root{
+    --bg:#F4F7FB;
+    --card:#FFFFFF;
+    --ink:#1C2B3E;
+    --muted:#7B8798;
+    --blue:#3E7FC7;
+    --blue-dark:#2C5E9A;
+    --blue-tint:#EAF2FC;
+    --teal:#279E86;
+    --amber:#C97C22;
+    --line:#E4E9F0;
+    --radius:20px;
+    --shadow:0 1px 3px rgba(28,43,62,.04), 0 12px 28px rgba(28,43,62,.07);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:56px;
+  }
+  .wrap{max-width:560px;margin:0 auto;padding:0 18px;}
+  .num{font-family:'IBM Plex Mono',monospace;}
+  .disp{font-family:'Sora',sans-serif;}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001ms !important; transition-duration:0.001ms !important;}
+  }
+
+  /* ================= TOP BAR ================= */
+  .topbar{
+    background:var(--card);
+    border-bottom:1px solid var(--line);
+    padding:16px 0;
+  }
+  .topbar-row{display:flex; align-items:center; justify-content:space-between;}
+  .logo-img{height:22px; display:block;}
+  .topbar-tag{
+    font-size:11px; color:var(--muted); font-weight:600; letter-spacing:.04em;
+  }
+
+  /* ================= HEADER TEXT ================= */
+  .page-head{padding:22px 0 6px;}
+  .page-title{
+    font-family:'Sora',sans-serif; font-weight:700; font-size:26px; margin:0 0 3px;
+    letter-spacing:-0.01em;
+  }
+  .page-sub{font-size:13.5px; color:var(--muted); margin:0; font-weight:500;}
+
+  /* ================= MONTH SWITCHER ================= */
+  .month-nav{
+    display:flex; align-items:center; gap:8px; margin:18px 0 18px;
+  }
+  .nav-btn{
+    width:36px; height:36px; border-radius:11px; border:1px solid var(--line);
+    background:var(--card); color:var(--blue-dark); font-size:16px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; flex:0 0 auto;
+  }
+  .nav-btn:active{background:var(--blue-tint);}
+  .month-select-group{
+    flex:1; display:flex; gap:4px; background:var(--card);
+    border:1px solid var(--line); border-radius:12px; padding:2px;
+  }
+  select.month, input.year{
+    background:transparent; border:none; color:var(--ink); font-family:'Sora',sans-serif;
+    font-weight:600; font-size:14.5px; padding:9px 6px; outline:none; width:100%;
+    -webkit-appearance:none; appearance:none; text-align:center;
+  }
+  select.month{text-align:left; padding-left:12px;}
+  input.year{max-width:66px;}
+
+  /* ================= HERO / RING CARD ================= */
+  .hero-card{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    box-shadow:var(--shadow); padding:20px; display:flex; align-items:center; gap:18px;
+  }
+  .ring-wrap{position:relative; width:112px; height:112px; flex:0 0 auto;}
+  .ring-wrap svg{transform:rotate(-90deg);}
+  #ringTrack{stroke:var(--blue-tint);}
+  #ringProgress{stroke:var(--blue); transition:stroke-dashoffset .5s ease;}
+  .ring-center{
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; text-align:center;
+  }
+  .ring-hours{font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:19px; color:var(--ink);}
+  .ring-caption{font-size:10px; color:var(--muted); font-weight:600; margin-top:2px;}
+
+  .hero-stats{flex:1; display:flex; flex-direction:column; gap:10px; min-width:0;}
+  .hero-stat-row{display:flex; justify-content:space-between; align-items:baseline;}
+  .hero-stat-label{font-size:12.5px; color:var(--muted); font-weight:500;}
+  .hero-stat-value{font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:17px;}
+  .hero-stat-value.amber{color:var(--amber); font-size:19px;}
+
+  /* ================= SECTIONS ================= */
+  .section{margin-top:26px;}
+  .section-head{
+    display:flex; align-items:baseline; justify-content:space-between; margin-bottom:12px;
+  }
+  .section-title{
+    font-family:'Sora',sans-serif; font-weight:600; font-size:14.5px;
+    color:var(--ink); margin:0;
+  }
+  .section-hint{font-size:11.5px; color:var(--muted);}
+
+  details.optional-fields{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:2px 16px; margin-top:22px;
+  }
+  details.optional-fields summary{
+    padding:13px 0; font-weight:600; font-size:13.5px; cursor:pointer; color:var(--blue-dark);
+    list-style:none; display:flex; align-items:center; gap:8px;
+  }
+  details.optional-fields summary::-webkit-details-marker{display:none;}
+  .opt-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; padding-bottom:16px;}
+  .opt-grid.full{grid-template-columns:1fr;}
+  .field label{font-size:11px; color:var(--muted); font-weight:600; display:block; margin-bottom:5px; letter-spacing:.02em;}
+  .field input, .field select{
+    width:100%; border:1px solid var(--line); border-radius:10px; padding:10px 11px;
+    font-family:'Inter',sans-serif; font-size:14px; color:var(--ink); background:#FBFCFE;
+  }
+  .field input:focus, .field select:focus{outline:2px solid var(--blue); outline-offset:1px;}
+
+  /* ================= DAY ROWS ================= */
+  .day{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    margin-bottom:8px; overflow:hidden; border-left:3px solid transparent;
+  }
+  .day.filled{border-left-color:var(--blue);}
+  .day[open]{border-color:var(--blue); border-left-color:var(--blue);}
+
+  .day summary{
+    list-style:none; cursor:pointer; padding:12px 15px;
+    display:flex; align-items:center; gap:13px;
+  }
+  .day summary::-webkit-details-marker{display:none;}
+  .day-num{
+    font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:14px;
+    width:32px; height:32px; border-radius:50%; background:var(--blue-tint);
+    display:flex; align-items:center; justify-content:center; flex:0 0 auto;
+    color:var(--blue-dark);
+  }
+  .day.filled .day-num{background:var(--blue); color:#fff;}
+  .day-info{flex:1; min-width:0;}
+  .day-weekday{font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.06em;}
+  .day-hours{font-size:14px; color:var(--ink); font-family:'IBM Plex Mono',monospace; margin-top:1px;}
+  .day-hours.empty{color:var(--muted); font-family:'Inter',sans-serif; font-size:13.5px;}
+  .check-dot{
+    width:8px; height:8px; border-radius:50%; background:var(--teal); flex:0 0 auto; opacity:0;
+  }
+  .day.filled .check-dot{opacity:1;}
+  .chevron{color:var(--muted); font-size:13px; transition:transform .15s; flex:0 0 auto;}
+  .day[open] .chevron{transform:rotate(180deg);}
+
+  .day-body{padding:2px 15px 15px;}
+  .shift{
+    display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;
+  }
+  .shift .field label{margin-bottom:4px;}
+  .shift-actions{display:flex; gap:16px; margin-top:2px;}
+  .link-btn{
+    border:none; background:none; color:var(--blue-dark); font-weight:600; font-size:12.5px;
+    cursor:pointer; padding:4px 0; font-family:'Inter',sans-serif;
+  }
+  .link-btn.danger{color:#B5533C;}
+
+  /* ================= FALTAS / FERIAS ================= */
+  .fx-row{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+
+  /* ================= SUMMARY CARD ================= */
+  .summary-card{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:18px; margin-top:26px; border-top:3px solid var(--blue);
+  }
+  .summary-line{
+    display:flex; justify-content:space-between; align-items:baseline;
+    padding:8px 0; border-bottom:1px solid var(--line); font-size:14px;
+  }
+  .summary-line:nth-of-type(3){border-bottom:none;}
+  .summary-line .label{color:var(--muted);}
+  .summary-line .val{font-family:'IBM Plex Mono',monospace; font-weight:600;}
+  .summary-total{
+    display:flex; justify-content:space-between; align-items:baseline;
+    margin-top:12px; padding-top:14px; border-top:1px solid var(--line);
+  }
+  .summary-total .label{font-family:'Sora',sans-serif; font-weight:600; font-size:14px;}
+  .summary-total .val{
+    font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:25px; color:var(--amber);
+  }
+
+  /* ================= BUTTONS ================= */
+  .actions{margin-top:20px; display:flex; flex-direction:column; gap:11px;}
+  .btn{
+    border:none; border-radius:14px; padding:15px 18px; font-family:'Sora',sans-serif;
+    font-weight:600; font-size:15px; cursor:pointer; display:flex; align-items:center;
+    justify-content:center; gap:9px; transition:transform .12s;
+  }
+  .btn-primary{background:var(--blue); color:#fff; box-shadow:0 6px 18px rgba(62,127,199,.28);}
+  .btn-primary:active{transform:scale(.98); background:var(--blue-dark);}
+  .btn-ghost{background:transparent; color:var(--muted); border:1px solid var(--line);}
+  .btn-ghost:active{background:var(--blue-tint);}
+
+  .hint{font-size:12px; color:var(--muted); line-height:1.55; margin-top:12px; text-align:center;}
+
+  .toast{
+    position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(10px);
+    background:var(--ink); color:#fff; padding:11px 20px; border-radius:11px;
+    font-size:13px; font-weight:600; opacity:0; transition:all .25s; pointer-events:none;
+    z-index:50; white-space:nowrap; font-family:'Inter',sans-serif;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  footer.credit{
+    text-align:center; font-size:11px; color:var(--muted); margin-top:26px; opacity:.7;
+  }
+
+  @media (min-width:600px){
+    .page-title{font-size:29px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="wrap topbar-row">
+    <img class="logo-img" src="affidea-logo.png" alt="Affidea">
+    <span class="topbar-tag">Registo Independente</span>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="page-head">
+    <h1 class="page-title">Cartão de Ponto</h1>
+    <p class="page-sub">Ana Margarida Teixeira Santos · Enfermeira</p>
+  </div>
+
+  <div class="month-nav">
+    <button class="nav-btn" id="prevMonth" aria-label="Mês anterior">‹</button>
+    <div class="month-select-group">
+      <select class="month" id="monthSelect" aria-label="Mês"></select>
+      <input class="year" id="yearInput" type="number" inputmode="numeric" aria-label="Ano">
+    </div>
+    <button class="nav-btn" id="nextMonth" aria-label="Mês seguinte">›</button>
+  </div>
+
+  <div class="hero-card">
+    <div class="ring-wrap">
+      <svg width="112" height="112" viewBox="0 0 112 112">
+        <circle id="ringTrack" cx="56" cy="56" r="48" fill="none" stroke-width="11"></circle>
+        <circle id="ringProgress" cx="56" cy="56" r="48" fill="none" stroke-width="11" stroke-linecap="round"></circle>
+      </svg>
+      <div class="ring-center">
+        <div class="ring-hours num" id="ringHoursLabel">0.0h</div>
+        <div class="ring-caption" id="ringCaption">0 de 30 dias</div>
+      </div>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat-row">
+        <span class="hero-stat-label">Dias trabalhados</span>
+        <span class="hero-stat-value num" id="heroDias">0</span>
+      </div>
+      <div class="hero-stat-row">
+        <span class="hero-stat-label">Total de horas</span>
+        <span class="hero-stat-value num" id="heroHoras">0.0h</span>
+      </div>
+      <div class="hero-stat-row">
+        <span class="hero-stat-label">A receber</span>
+        <span class="hero-stat-value amber num" id="heroMoney">0,00 €</span>
+      </div>
+    </div>
+  </div>
+
+  <details class="optional-fields">
+    <summary>Dados do cabeçalho</summary>
+    <div class="opt-grid">
+      <div class="field">
+        <label for="fUnidade">Unidade</label>
+        <input type="text" id="fUnidade" placeholder="—">
+      </div>
+      <div class="field">
+        <label for="fPosto">Posto</label>
+        <input type="text" id="fPosto" placeholder="—">
+      </div>
+    </div>
+    <div class="opt-grid full">
+      <div class="field">
+        <label for="fCategoria">Categoria profissional</label>
+        <input type="text" id="fCategoria" value="Enfermeira">
+      </div>
+    </div>
+  </details>
+
+  <div class="section">
+    <div class="section-head">
+      <p class="section-title">Turnos do mês</p>
+      <p class="section-hint">toca num dia para registar</p>
+    </div>
+    <div id="days"></div>
+  </div>
+
+  <div class="section">
+    <div class="fx-row">
+      <div class="field">
+        <label for="fFaltas">Faltas</label>
+        <input type="number" min="0" id="fFaltas" value="0">
+      </div>
+      <div class="field">
+        <label for="fFerias">Férias</label>
+        <input type="number" min="0" id="fFerias" value="0">
+      </div>
+    </div>
+  </div>
+
+  <div class="summary-card">
+    <div class="summary-line"><span class="label">Dias trabalhados</span><span class="val" id="sDias">0</span></div>
+    <div class="summary-line"><span class="label">Total de horas</span><span class="val" id="sHoras">0.0h</span></div>
+    <div class="summary-line"><span class="label">Valor à hora</span><span class="val">13,00 €</span></div>
+    <div class="summary-total"><span class="label">A receber este mês</span><span class="val" id="sTotal">0,00 €</span></div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-primary" id="exportBtn">Exportar PDF para a clínica</button>
+    <button class="btn btn-ghost" id="resetBtn">Limpar este mês</button>
+  </div>
+
+  <p class="hint">Os turnos ficam guardados neste telemóvel, mês a mês. Regista-os conforme forem acontecendo — quando o mês fechar, exporta o PDF e envia à clínica.</p>
+
+  <footer class="credit">MOD-G-078B · uso pessoal</footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  var MONTHS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+  var WEEKDAYS = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+  var NOME = "Ana Margarida Teixeira Santos";
+  var RUBRICA = "Margarida Santos";
+  var RATE = 13;
+  var RING_R = 48;
+  var RING_CIRC = 2 * Math.PI * RING_R;
+
+  var monthSelect = document.getElementById('monthSelect');
+  var yearInput = document.getElementById('yearInput');
+  var daysEl = document.getElementById('days');
+  var toastEl = document.getElementById('toast');
+  var ringProgress = document.getElementById('ringProgress');
+
+  ringProgress.style.strokeDasharray = RING_CIRC;
+  ringProgress.style.strokeDashoffset = RING_CIRC;
+  document.getElementById('ringTrack').style.strokeDasharray = RING_CIRC;
+
+  MONTHS.forEach(function(m, i){
+    var opt = document.createElement('option');
+    opt.value = i+1;
+    opt.textContent = m;
+    monthSelect.appendChild(opt);
+  });
+
+  var today = new Date();
+  var current = { month: today.getMonth()+1, year: today.getFullYear() };
+  monthSelect.value = current.month;
+  yearInput.value = current.year;
+
+  var state = null;
+  var saveTimer = null;
+  var lastHours = 0, lastMoney = 0;
+  var STORAGE_AVAILABLE = true;
+  try {
+    var t = '__test__'; localStorage.setItem(t,'1'); localStorage.removeItem(t);
+  } catch(e){ STORAGE_AVAILABLE = false; }
+
+  function emptyState(){
+    return { days:{}, faltas:0, ferias:0, unidade:"", posto:"", categoria:"Enfermeira" };
+  }
+
+  function daysInMonth(year, month){
+    return new Date(year, month, 0).getDate();
+  }
+
+  function storageKey(m, y){
+    return 'folha-ponto:'+y+'-'+String(m).padStart(2,'0');
+  }
+
+  function showToast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    setTimeout(function(){ toastEl.classList.remove('show'); }, 1800);
+  }
+
+  function timeToMinutes(t){
+    if(!t) return null;
+    var parts = t.split(':');
+    return parseInt(parts[0],10)*60 + parseInt(parts[1],10);
+  }
+
+  function shiftHours(e, s){
+    var em = timeToMinutes(e), sm = timeToMinutes(s);
+    if(em===null || sm===null) return 0;
+    var diff = sm - em;
+    if(diff < 0) diff += 24*60;
+    return diff/60;
+  }
+
+  function dayHours(d){
+    if(!d) return 0;
+    return shiftHours(d.e1, d.s1) + shiftHours(d.e2, d.s2);
+  }
+
+  function fmtHours(h){
+    return h.toFixed(1).replace('.', ',') + 'h';
+  }
+  function fmtMoney(v){
+    return v.toLocaleString('pt-PT', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' €';
+  }
+
+  function animateNumber(el, from, to, formatter){
+    var start = performance.now(), dur = 400;
+    function step(now){
+      var t = Math.min(1, (now-start)/dur);
+      var val = from + (to-from)*t;
+      el.textContent = formatter(val);
+      if(t < 1) requestAnimationFrame(step);
+      else el.textContent = formatter(to);
+    }
+    requestAnimationFrame(step);
+  }
+
+  function computeTotals(){
+    var totalHours = 0, worked = 0;
+    Object.keys(state.days).forEach(function(k){
+      var h = dayHours(state.days[k]);
+      if(h > 0){ totalHours += h; worked++; }
+    });
+    return { totalHours: totalHours, worked: worked, money: totalHours*RATE };
+  }
+
+  function refreshSummary(){
+    var t = computeTotals();
+    var n = daysInMonth(current.year, current.month);
+
+    document.getElementById('sDias').textContent = t.worked;
+    document.getElementById('sHoras').textContent = fmtHours(t.totalHours);
+    document.getElementById('sTotal').textContent = fmtMoney(t.money);
+
+    document.getElementById('heroDias').textContent = t.worked;
+    animateNumber(document.getElementById('heroHoras'), lastHours, t.totalHours, fmtHours);
+    animateNumber(document.getElementById('heroMoney'), lastMoney, t.money, fmtMoney);
+    animateNumber(document.getElementById('ringHoursLabel'), lastHours, t.totalHours, fmtHours);
+    document.getElementById('ringCaption').textContent = t.worked + ' de ' + n + ' dias';
+
+    var fraction = n > 0 ? Math.min(1, t.worked / n) : 0;
+    ringProgress.style.strokeDashoffset = RING_CIRC * (1 - fraction);
+
+    lastHours = t.totalHours;
+    lastMoney = t.money;
+  }
+
+  function scheduleSave(){
+    if(!STORAGE_AVAILABLE) return;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function(){
+      try{
+        localStorage.setItem(storageKey(current.month, current.year), JSON.stringify(state));
+      } catch(e){
+        showToast('Não foi possível guardar neste dispositivo.');
+      }
+    }, 300);
+  }
+
+  function renderOptionalFields(){
+    document.getElementById('fUnidade').value = state.unidade || '';
+    document.getElementById('fPosto').value = state.posto || '';
+    document.getElementById('fCategoria').value = state.categoria || 'Enfermeira';
+    document.getElementById('fFaltas').value = state.faltas || 0;
+    document.getElementById('fFerias').value = state.ferias || 0;
+  }
+
+  function makeShiftRow(dayNum, idx, getDay, onUpdate){
+    var wrap = document.createElement('div');
+    wrap.className = 'shift';
+
+    var existing = state.days[dayNum] || {};
+
+    var eField = document.createElement('div');
+    eField.className = 'field';
+    var eLabel = document.createElement('label');
+    eLabel.textContent = 'Entrada';
+    var eInput = document.createElement('input');
+    eInput.type = 'time';
+    eInput.value = existing['e'+idx] || '';
+    eField.appendChild(eLabel); eField.appendChild(eInput);
+
+    var sField = document.createElement('div');
+    sField.className = 'field';
+    var sLabel = document.createElement('label');
+    sLabel.textContent = 'Saída';
+    var sInput = document.createElement('input');
+    sInput.type = 'time';
+    sInput.value = existing['s'+idx] || '';
+    sField.appendChild(sLabel); sField.appendChild(sInput);
+
+    wrap.appendChild(eField); wrap.appendChild(sField);
+
+    function onChange(){
+      var d = getDay();
+      d['e'+idx] = eInput.value;
+      d['s'+idx] = sInput.value;
+      onUpdate();
+    }
+    eInput.addEventListener('change', onChange);
+    sInput.addEventListener('change', onChange);
+
+    return wrap;
+  }
+
+  function updateDaySummaryUI(dayNum){
+    var el = daysEl.querySelector('.day[data-day="'+dayNum+'"]');
+    if(!el) return;
+    var d = state.days[dayNum];
+    var h = dayHours(d);
+    var hoursEl = el.querySelector('.day-hours');
+    if(h > 0){
+      el.classList.add('filled');
+      hoursEl.classList.remove('empty');
+      hoursEl.textContent = fmtHours(h) + ' trabalhadas';
+    } else {
+      el.classList.remove('filled');
+      hoursEl.classList.add('empty');
+      hoursEl.textContent = 'Sem registo';
+    }
+  }
+
+  function createDayElement(dayNum){
+    function getDay(){
+      if(!state.days[dayNum]) state.days[dayNum] = {};
+      return state.days[dayNum];
+    }
+    function onDayChanged(){
+      var d = state.days[dayNum];
+      var hasAny = d && (d.e1 || d.s1 || d.e2 || d.s2);
+      if(hasAny){
+        d.rubrica = RUBRICA;
+      } else if(d){
+        delete state.days[dayNum];
+      }
+      scheduleSave();
+      refreshSummary();
+      updateDaySummaryUI(dayNum);
+    }
+
+    var dayData = state.days[dayNum] || {};
+
+    var det = document.createElement('details');
+    det.className = 'day' + (dayHours(dayData) > 0 ? ' filled' : '');
+    det.setAttribute('data-day', dayNum);
+
+    var summary = document.createElement('summary');
+    var num = document.createElement('div');
+    num.className = 'day-num';
+    num.textContent = dayNum;
+
+    var info = document.createElement('div');
+    info.className = 'day-info';
+    var wd = document.createElement('div');
+    wd.className = 'day-weekday';
+    var dateObj = new Date(current.year, current.month-1, dayNum);
+    wd.textContent = WEEKDAYS[dateObj.getDay()];
+    var hrs = document.createElement('div');
+    var h0 = dayHours(dayData);
+    hrs.className = 'day-hours' + (h0 > 0 ? '' : ' empty');
+    hrs.textContent = h0 > 0 ? (fmtHours(h0) + ' trabalhadas') : 'Sem registo';
+    info.appendChild(wd); info.appendChild(hrs);
+
+    var dot = document.createElement('div');
+    dot.className = 'check-dot';
+
+    var chev = document.createElement('div');
+    chev.className = 'chevron';
+    chev.textContent = '▾';
+
+    summary.appendChild(num);
+    summary.appendChild(info);
+    summary.appendChild(dot);
+    summary.appendChild(chev);
+    det.appendChild(summary);
+
+    var body = document.createElement('div');
+    body.className = 'day-body';
+
+    var row1 = makeShiftRow(dayNum, 1, getDay, onDayChanged);
+    body.appendChild(row1);
+
+    var row2Container = document.createElement('div');
+    var hasSecondTurno = !!(dayData.e2 || dayData.s2);
+    if(hasSecondTurno){
+      row2Container.appendChild(makeShiftRow(dayNum, 2, getDay, onDayChanged));
+    }
+    body.appendChild(row2Container);
+
+    var actions = document.createElement('div');
+    actions.className = 'shift-actions';
+
+    var addTurnoBtn = document.createElement('button');
+    addTurnoBtn.className = 'link-btn';
+    addTurnoBtn.textContent = '+ 2º turno';
+    addTurnoBtn.style.display = hasSecondTurno ? 'none' : 'inline';
+    addTurnoBtn.addEventListener('click', function(){
+      row2Container.innerHTML = '';
+      row2Container.appendChild(makeShiftRow(dayNum, 2, getDay, onDayChanged));
+      addTurnoBtn.style.display = 'none';
+    });
+
+    var clearBtn = document.createElement('button');
+    clearBtn.className = 'link-btn danger';
+    clearBtn.textContent = 'Limpar dia';
+    clearBtn.addEventListener('click', function(){
+      delete state.days[dayNum];
+      var fresh = createDayElement(dayNum);
+      det.replaceWith(fresh);
+      scheduleSave();
+      refreshSummary();
+    });
+
+    actions.appendChild(addTurnoBtn);
+    actions.appendChild(clearBtn);
+    body.appendChild(actions);
+
+    det.appendChild(body);
+    return det;
+  }
+
+  function renderDays(){
+    daysEl.innerHTML = '';
+    var n = daysInMonth(current.year, current.month);
+    var frag = document.createDocumentFragment();
+    for(var i=1; i<=n; i++){
+      frag.appendChild(createDayElement(i));
+    }
+    daysEl.appendChild(frag);
+  }
+
+  function loadMonth(){
+    var key = storageKey(current.month, current.year);
+    if(!STORAGE_AVAILABLE){
+      state = emptyState();
+      afterLoad();
+      return;
+    }
+    try{
+      var raw = localStorage.getItem(key);
+      state = raw ? JSON.parse(raw) : emptyState();
+    }catch(e){
+      state = emptyState();
+    }
+    afterLoad();
+  }
+
+  function afterLoad(){
+    renderOptionalFields();
+    renderDays();
+    lastHours = 0; lastMoney = 0;
+    refreshSummary();
+  }
+
+  function bindHeaderFields(){
+    document.getElementById('fUnidade').addEventListener('input', function(e){
+      state.unidade = e.target.value; scheduleSave();
+    });
+    document.getElementById('fPosto').addEventListener('input', function(e){
+      state.posto = e.target.value; scheduleSave();
+    });
+    document.getElementById('fCategoria').addEventListener('input', function(e){
+      state.categoria = e.target.value; scheduleSave();
+    });
+    document.getElementById('fFaltas').addEventListener('input', function(e){
+      state.faltas = parseInt(e.target.value,10) || 0; scheduleSave();
+    });
+    document.getElementById('fFerias').addEventListener('input', function(e){
+      state.ferias = parseInt(e.target.value,10) || 0; scheduleSave();
+    });
+  }
+
+  function changeMonth(delta){
+    var m = current.month + delta, y = current.year;
+    if(m < 1){ m = 12; y -= 1; }
+    if(m > 12){ m = 1; y += 1; }
+    current.month = m; current.year = y;
+    monthSelect.value = m;
+    yearInput.value = y;
+    loadMonth();
+  }
+
+  monthSelect.addEventListener('change', function(){
+    current.month = parseInt(monthSelect.value,10);
+    loadMonth();
+  });
+  yearInput.addEventListener('change', function(){
+    var y = parseInt(yearInput.value,10);
+    if(y && y > 1999 && y < 2100){ current.year = y; loadMonth(); }
+  });
+  document.getElementById('prevMonth').addEventListener('click', function(){ changeMonth(-1); });
+  document.getElementById('nextMonth').addEventListener('click', function(){ changeMonth(1); });
+
+  document.getElementById('resetBtn').addEventListener('click', function(){
+    if(!confirm('Limpar todos os registos deste mês?')) return;
+    state = emptyState();
+    renderOptionalFields();
+    renderDays();
+    scheduleSave();
+    refreshSummary();
+    showToast('Mês limpo.');
+  });
+
+  document.getElementById('exportBtn').addEventListener('click', function(){
+    exportPDF();
+  });
+
+  function exportPDF(){
+    var jsPDFCtor = window.jspdf ? window.jspdf.jsPDF : window.jsPDF;
+    var doc = new jsPDFCtor({ unit: 'pt', format: 'a4' });
+    var pageWidth = doc.internal.pageSize.getWidth();
+    var marginX = 40;
+
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(15);
+    doc.setTextColor(40,40,40);
+    doc.text('affidea', marginX, 46);
+
+    doc.setFont('helvetica','italic');
+    doc.setFontSize(10);
+    doc.text('Funcionário Independente', pageWidth - marginX, 40, { align:'right' });
+
+    var n = daysInMonth(current.year, current.month);
+    var monthName = MONTHS[current.month-1];
+
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(12);
+    doc.text('Folha de Ponto de 1 ' + monthName + ' a ' + n + ' ' + monthName, marginX, 74);
+
+    doc.setFontSize(12);
+    doc.text('Ano:', pageWidth - marginX - 60, 74);
+    doc.setFont('helvetica','normal');
+    doc.text(String(current.year), pageWidth - marginX - 34, 74);
+
+    var y = 100;
+    doc.setFontSize(10.5);
+    doc.setFont('helvetica','bold');
+    doc.text('Unidade:', marginX, y);
+    doc.setFont('helvetica','normal');
+    doc.text(state.unidade || '', marginX + 55, y);
+
+    doc.setFont('helvetica','bold');
+    doc.text('Posto:', pageWidth/2 + 10, y);
+    doc.setFont('helvetica','normal');
+    doc.text(state.posto || '', pageWidth/2 + 50, y);
+
+    y += 20;
+    doc.setFont('helvetica','bold');
+    doc.text('Funcionário(a) nº', marginX, y);
+
+    doc.setFont('helvetica','bold');
+    doc.text('Nome:', pageWidth/2 + 10, y);
+    doc.setFont('helvetica','normal');
+    doc.text(NOME, pageWidth/2 + 48, y);
+
+    y += 20;
+    doc.setFont('helvetica','bold');
+    doc.text('Categoria Profissional:', marginX, y);
+    doc.setFont('helvetica','normal');
+    doc.text(state.categoria || 'Enfermeira', marginX + 130, y);
+
+    var body = [];
+    for(var i=1; i<=31; i++){
+      var d = (i<=n) ? (state.days[i] || {}) : {};
+      var rubrica = (d.e1||d.s1||d.e2||d.s2) ? RUBRICA : '';
+      body.push([
+        String(i),
+        d.e1 || '',
+        d.s1 || '',
+        d.e2 || '',
+        d.s2 || '',
+        rubrica,
+        ''
+      ]);
+    }
+
+    doc.autoTable({
+      startY: y + 14,
+      margin: { left: marginX, right: marginX },
+      head: [['Dias','Entrada','Saída','Entrada','Saída','Rubrica','Observações']],
+      body: body,
+      theme: 'grid',
+      styles: { fontSize: 8.5, cellPadding: 3, halign:'center', lineColor:[60,60,60], lineWidth:0.5, textColor:[20,20,20] },
+      headStyles: { fillColor:[255,255,255], textColor:[0,0,0], fontStyle:'bold', lineWidth:0.5 },
+      columnStyles: {
+        0: { cellWidth: 32 },
+        1: { cellWidth: 55 },
+        2: { cellWidth: 55 },
+        3: { cellWidth: 55 },
+        4: { cellWidth: 55 },
+        5: { cellWidth: 90, halign:'left' },
+        6: { cellWidth: 'auto', halign:'left' }
+      }
+    });
+
+    var finalY = doc.lastAutoTable.finalY + 22;
+    doc.setFontSize(10.5);
+    doc.setFont('helvetica','bold');
+    doc.text('Faltas:', marginX, finalY);
+    doc.setFont('helvetica','normal');
+    doc.text(state.faltas ? String(state.faltas) : '', marginX + 40, finalY);
+
+    doc.setFont('helvetica','bold');
+    doc.text('Férias:', marginX + 140, finalY);
+    doc.setFont('helvetica','normal');
+    doc.text(state.ferias ? String(state.ferias) : '', marginX + 178, finalY);
+
+    finalY += 34;
+    doc.setFont('helvetica','bold');
+    doc.text('O Colaborador', marginX, finalY);
+    doc.text('O Responsável', pageWidth/2 + 10, finalY);
+
+    finalY += 22;
+    doc.setFont('helvetica','italic');
+    doc.setFontSize(11);
+    doc.text(NOME, marginX, finalY);
+    doc.setDrawColor(120,120,120);
+    doc.line(pageWidth/2 + 10, finalY, pageWidth - marginX, finalY);
+
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(8);
+    doc.setTextColor(120,120,120);
+    doc.text('MOD-G-078B | Rev.00', pageWidth - marginX, doc.internal.pageSize.getHeight() - 24, { align:'right' });
+
+    var filename = 'Folha_de_Ponto_' + monthName + '_' + current.year + '.pdf';
+    doc.save(filename);
+    showToast('PDF exportado.');
+  }
+
+  bindHeaderFields();
+  loadMonth();
+
+  if(!STORAGE_AVAILABLE){
+    showToast('O navegador está a bloquear o armazenamento local.');
+  }
+})();
+</script>
+</body>
+</html>
